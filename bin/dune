@@ -1,0 +1,4 @@
+(executable
+ (public_name forester_incr)
+ (name main)
+ (libraries forester_incr current_incr))

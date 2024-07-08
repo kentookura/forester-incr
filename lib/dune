@@ -1,0 +1,12 @@
+(library
+ (libraries 
+   forester.core
+   forester.frontend
+   ocamlgraph
+   current_incr)
+ (name forester_incr))
+
+(env
+ (dev
+  (flags
+   (:standard -w -66-32-33-27-26))))
