@@ -74,7 +74,7 @@ module Relation_set = Set.Make (struct
   let compare = compare
 end)
 
-(* This smells, feel like we should have a trie for this *)
+(* TODO: *)
 module Query_set_map = Map.Make (struct
   type t = Query_set.t
 
@@ -84,6 +84,7 @@ end)
 (* The core type. *)
 
 type 'a query_triemap =
+  | Empty
   | QM of {
       rel : 'a Addr_map.t Rel_query_map.t;
       isect : 'a Query_set_map.t;
@@ -96,6 +97,7 @@ type 'a query_triemap =
 let rec lookup : type a. query -> a query_triemap -> a option =
  fun q qm ->
   match qm with
+  | Empty -> None
   | QM { rel; isect; union; complement; isect_fam; union_fam } -> (
       match Forester_core.Query.view q with
       | Rel (q, a) ->
@@ -113,6 +115,57 @@ let rec lookup : type a. query -> a query_triemap -> a option =
           Option.bind
             (Query_map.find_opt q isect_fam)
             (Rel_query_map.find_opt v))
+
+type 'a tf = 'a option -> 'a option
+
+let lift_tf f tf = match tf with Some m -> Some (f m) | None -> Some (f Empty)
+
+let rec update : type a. query -> a tf -> a query_triemap -> a query_triemap =
+ fun q tf qm ->
+  match qm with
+  | Empty -> Empty
+  | QM ({ rel; isect; union; complement; isect_fam; union_fam } as m) -> (
+      match view q with
+      | Rel (relq, addr) ->
+          QM
+            {
+              m with
+              rel =
+                Rel_query_map.update relq
+                  (Option.map (Addr_map.update addr tf))
+                  rel;
+            }
+      | Isect qs ->
+          QM
+            {
+              m with
+              isect = Query_set_map.update (Query_set.of_list qs) tf isect;
+            }
+      | Union qs ->
+          QM
+            {
+              m with
+              union = Query_set_map.update (Query_set.of_list qs) tf union;
+            }
+      | Complement query -> update query tf complement
+      | Isect_fam (query, rel_query) ->
+          QM
+            {
+              m with
+              isect_fam =
+                Query_map.update query
+                  (Option.map (Rel_query_map.update rel_query tf))
+                  isect_fam;
+            }
+      | Union_fam (query, rel_query) ->
+          QM
+            {
+              m with
+              union_fam =
+                Query_map.update query
+                  (Option.map (Rel_query_map.update rel_query tf))
+                  union_fam;
+            })
 
 module S = Relation_set
 
