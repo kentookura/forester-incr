@@ -81,108 +81,139 @@ module Query_set_map = Map.Make (struct
   let compare = compare
 end)
 
-(* The core type. *)
-
-type 'a query_triemap =
-  | Empty
-  | QM of {
-      rel : 'a Addr_map.t Rel_query_map.t;
-      isect : 'a Query_set_map.t;
-      union : 'a Query_set_map.t;
-      complement : 'a query_triemap;
-      isect_fam : 'a Rel_query_map.t Query_map.t;
-      union_fam : 'a Rel_query_map.t Query_map.t;
-    }
-
-let rec lookup : type a. query -> a query_triemap -> a option =
- fun q qm ->
-  match qm with
-  | Empty -> None
-  | QM { rel; isect; union; complement; isect_fam; union_fam } -> (
-      match Forester_core.Query.view q with
-      | Rel (q, a) ->
-          Option.bind (Rel_query_map.find_opt q rel) (Addr_map.find_opt a)
-      (* TODO: isect and union should not be sensitive to list order. That's
-         why we store with key type of set*)
-      | Isect qs -> Query_set_map.find_opt (Query_set.of_list qs) isect
-      | Union qs -> Query_set_map.find_opt (Query_set.of_list qs) union
-      | Complement q -> lookup q complement
-      | Isect_fam (q, v) ->
-          Option.bind
-            (Query_map.find_opt q isect_fam)
-            (Rel_query_map.find_opt v)
-      | Union_fam (q, v) ->
-          Option.bind
-            (Query_map.find_opt q isect_fam)
-            (Rel_query_map.find_opt v))
-
 type 'a tf = 'a option -> 'a option
 
-let lift_tf f tf = match tf with Some m -> Some (f m) | None -> Some (f Empty)
+(* The core type. *)
+module Query_trie : sig
+  type key
+  type 'a t
 
-let rec update : type a. query -> a tf -> a query_triemap -> a query_triemap =
- fun q tf qm ->
-  match qm with
-  | Empty -> Empty
-  | QM ({ rel; isect; union; complement; isect_fam; union_fam } as m) -> (
-      match view q with
-      | Rel (relq, addr) ->
-          QM
-            {
-              m with
-              rel =
-                Rel_query_map.update relq
-                  (Option.map (Addr_map.update addr tf))
-                  rel;
-            }
-      | Isect qs ->
-          QM
-            {
-              m with
-              isect = Query_set_map.update (Query_set.of_list qs) tf isect;
-            }
-      | Union qs ->
-          QM
-            {
-              m with
-              union = Query_set_map.update (Query_set.of_list qs) tf union;
-            }
-      | Complement query -> update query tf complement
-      | Isect_fam (query, rel_query) ->
-          QM
-            {
-              m with
-              isect_fam =
-                Query_map.update query
-                  (Option.map (Rel_query_map.update rel_query tf))
-                  isect_fam;
-            }
-      | Union_fam (query, rel_query) ->
-          QM
-            {
-              m with
-              union_fam =
-                Query_map.update query
-                  (Option.map (Rel_query_map.update rel_query tf))
-                  union_fam;
-            })
+  val empty : 'a t
+  val lookup : key -> 'a t -> 'a option
+  val update : key -> 'a tf -> 'a t -> 'a t
+  (* val foldr : ('a -> 'b -> 'b) -> key -> 'b -> 'b *)
+end = struct
+  type key = query
+
+  type 'a t =
+    | Empty
+    | QM of {
+        rel : 'a Addr_map.t Rel_query_map.t;
+        isect : 'a Query_set_map.t;
+        union : 'a Query_set_map.t;
+        complement : 'a t;
+        isect_fam : 'a Rel_query_map.t Query_map.t;
+        union_fam : 'a Rel_query_map.t Query_map.t;
+      }
+
+  let empty = Empty
+
+  let rec lookup : type a. query -> a t -> a option =
+   fun q qm ->
+    match qm with
+    | Empty -> None
+    | QM { rel; isect; union; complement; isect_fam; union_fam } -> (
+        match Forester_core.Query.view q with
+        | Rel (q, a) ->
+            Option.bind (Rel_query_map.find_opt q rel) (Addr_map.find_opt a)
+        (* TODO: isect and union should not be sensitive to list order. That's
+           why we store with key type of set*)
+        | Isect qs -> Query_set_map.find_opt (Query_set.of_list qs) isect
+        | Union qs -> Query_set_map.find_opt (Query_set.of_list qs) union
+        | Complement q -> lookup q complement
+        | Isect_fam (q, v) ->
+            Option.bind
+              (Query_map.find_opt q isect_fam)
+              (Rel_query_map.find_opt v)
+        | Union_fam (q, v) ->
+            Option.bind
+              (Query_map.find_opt q isect_fam)
+              (Rel_query_map.find_opt v))
+
+  type 'a tf = 'a option -> 'a option
+
+  let lift_tf f tf =
+    match tf with Some m -> Some (f m) | None -> Some (f Empty)
+
+  let rec update : type a. query -> a tf -> a t -> a t =
+   fun q tf qm ->
+    match qm with
+    | Empty -> Empty
+    | QM ({ rel; isect; union; complement; isect_fam; union_fam } as m) -> (
+        match view q with
+        | Rel (relq, addr) ->
+            QM
+              {
+                m with
+                rel =
+                  Rel_query_map.update relq
+                    (Option.map (Addr_map.update addr tf))
+                    rel;
+              }
+        | Isect qs ->
+            QM
+              {
+                m with
+                isect = Query_set_map.update (Query_set.of_list qs) tf isect;
+              }
+        | Union qs ->
+            QM
+              {
+                m with
+                union = Query_set_map.update (Query_set.of_list qs) tf union;
+              }
+        | Complement query -> update query tf complement
+        | Isect_fam (query, rel_query) ->
+            QM
+              {
+                m with
+                isect_fam =
+                  Query_map.update query
+                    (Option.map (Rel_query_map.update rel_query tf))
+                    isect_fam;
+              }
+        | Union_fam (query, rel_query) ->
+            QM
+              {
+                m with
+                union_fam =
+                  Query_map.update query
+                    (Option.map (Rel_query_map.update rel_query tf))
+                    union_fam;
+              })
+
+  (* TODO: unclear how to do this as in the paper they have acess to polymorphic maps
+
+     let rec foldr : type a. (a -> 'r -> 'r) -> 'r -> a t -> 'r =
+      fun k z qm ->
+       match qm with
+       | Empty -> z
+       | QM { rel; isect; union; complement; isect_fam; union_fam } ->
+           let kapp m1 r = foldr k r m1 in
+           let z1 = foldr kapp z () in
+           let module M = Map.Make (struct
+             type t = unit
+
+             let compare = compare
+           end) in
+           M.fold k z1 rel
+  *)
+end
 
 module S = Relation_set
 
-let from_rel_query (rel_query : rel_query) =
-  match rel_query with mode, polarity, rel -> S.of_list [ rel ]
-
-(* The set of relations in a query *)
+(* The set of relations in a query. We might want something more fine grained*)
 let rec relations (q : query) : S.t =
   match view q with
-  | Rel (rel_query, addr) -> from_rel_query rel_query
+  | Rel ((_, _, rel), addr) -> S.singleton rel
   | Isect qs | Union qs ->
       List.fold_left S.union S.empty (List.map relations qs)
   | Complement q -> relations q
   | Isect_fam (query, (_, _, rel)) | Union_fam (query, (_, _, rel)) ->
       S.union (S.singleton rel) (relations query)
 
-(* One for each builtin relation*)
+(* One for each builtin relation. Expand on this if you want to create a
+   tree-editor.*)
 type edit_actions =
   | Links
   | Transclusion
@@ -190,6 +221,10 @@ type edit_actions =
   | Contributors
   | Taxa
   | Tags
+
+(* If a tree is matched by `q` and is edited, but the edit action can't change
+   the relations in q, then the trees that query only along only this relation
+   will not need to be rerendered.*)
 
 let can_change_relations edit_actions rels =
   match edit_actions with
@@ -202,7 +237,3 @@ let can_change_relations edit_actions rels =
 
 let can_change_query_result edit_actions query =
   can_change_relations edit_actions (relations query)
-
-(* If a tree is matched by `q` and is edited, but the edit action can't change
-   the relations in q, then the trees that query only along only this relation
-   will not need to be rerendered.*)
