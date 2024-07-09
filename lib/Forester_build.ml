@@ -1,8 +1,4 @@
-(* Nothing of note in here yet.
-
-   Eventual goal is code that understand how a change in one tree propagates
-   through the forest.
-*)
+(* Nothing of note in here yet. *)
 
 open Forester_frontend
 open Forester_core
