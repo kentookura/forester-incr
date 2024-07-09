@@ -182,22 +182,17 @@ end = struct
                     union_fam;
               })
 
+  let insert : key -> 'a -> 'a t -> 'a t = fun k v -> update k (fun _ -> Some v)
+  let delete : key -> 'a -> 'a t -> 'a t = fun k v -> update k (fun _ -> None)
+
   (* TODO: unclear how to do this as in the paper they have acess to polymorphic maps
-
-     let rec foldr : type a. (a -> 'r -> 'r) -> 'r -> a t -> 'r =
-      fun k z qm ->
-       match qm with
-       | Empty -> z
-       | QM { rel; isect; union; complement; isect_fam; union_fam } ->
-           let kapp m1 r = foldr k r m1 in
-           let z1 = foldr kapp z () in
-           let module M = Map.Make (struct
-             type t = unit
-
-             let compare = compare
-           end) in
-           M.fold k z1 rel
   *)
+
+  let foldr : type a b. (a -> b -> b) -> b -> a t -> b =
+   fun k z qm ->
+    match qm with
+    | Empty -> z
+    | QM { rel; isect; union; complement; isect_fam; union_fam } -> z
 end
 
 module S = Relation_set
