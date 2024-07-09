@@ -13,14 +13,13 @@ However, we must also rerender those trees whose queries match S. How can this
 be done efficiently?
 
 We could use `Graph.Imperative.Digraph.ConcreteLabled (Addr) (Query)` and add
-an edge whenever `run_query` returns an `Addr_set.t`. This repo is not the
-place for this experiment.
+an edge whenever `run_query` returns an `Addr_set.t`. 
 
 # Fast queries for the hypermedia server
 
 In order to avoid rerunning queries, I created a triemap indexed by `addr
-Query.t`. It can efficiently look up stored values by matching on the strucure
-of the query. It might be useful when rendering query results, or when in a
-dynamic environment in which a user can provide queries. For queries such as
-`Isect` and `Union`, we can construct the search result by looking up its
-parts, only querying when we need to and compute the result.
+Query.t`. Lookup procedes by matching on the strucure of the query.
+
+It may be used as a cache for storing query results. For queries such as
+`Isect` and `Union`, we can compute the result by looking up its parts, only
+running the query when it is not present in the triemap.
