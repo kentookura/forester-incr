@@ -222,6 +222,39 @@ end = struct
 
   let cardinal : 'a t -> int = fun m -> fold (fun _ n -> n + 1) m 0
   let elems : 'a t -> 'a list = fun m -> fold List.cons m []
+
+  let rec union_with : 'a. ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t =
+   fun f m1 m2 ->
+    match (m1, m2) with
+    | QM r1, QM r2 ->
+        let rel =
+          Rel_query_map.union
+            (fun _ m1 m2 ->
+              Some (Addr_map.union (fun _ s t -> Some (f s t)) m1 m2))
+            r1.rel r2.rel
+        in
+        let isect =
+          Query_set_map.union (fun _ m1 m2 -> Some (f m1 m2)) r1.isect r2.isect
+        in
+        let union =
+          Query_set_map.union (fun _ m1 m2 -> Some (f m1 m2)) r1.union r2.union
+        in
+        let complement = union_with f r1.complement r2.complement in
+        let isect_fam =
+          Query_map.union
+            (fun _ m1 m2 ->
+              Some (Rel_query_map.union (fun _ s t -> Some (f s t)) m1 m2))
+            r1.isect_fam r2.isect_fam
+        in
+        let union_fam =
+          Query_map.union
+            (fun _ m1 m2 ->
+              Some (Rel_query_map.union (fun _ s t -> Some (f s t)) m1 m2))
+            r1.union_fam r2.union_fam
+        in
+        QM { rel; isect; union; complement; isect_fam; union_fam }
+    | qm, Empty -> qm
+    | Empty, qm -> qm
 end
 
 module S = Relation_set
