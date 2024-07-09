@@ -226,7 +226,7 @@ end
 
 module S = Relation_set
 
-(* The set of relations in a query. We might want something more fine grained*)
+(* The set of relations in a query. We might want something more fine grained *)
 let rec relations (q : query) : S.t =
   match view q with
   | Rel ((_, _, rel), addr) -> S.singleton rel
