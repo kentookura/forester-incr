@@ -91,7 +91,7 @@ module Query_trie : sig
   val empty : 'a t
   val lookup : key -> 'a t -> 'a option
   val update : key -> 'a tf -> 'a t -> 'a t
-  (* val foldr : ('a -> 'b -> 'b) -> key -> 'b -> 'b *)
+  val fold : ('a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
 end = struct
   type key = query
 
@@ -185,14 +185,35 @@ end = struct
   let insert : key -> 'a -> 'a t -> 'a t = fun k v -> update k (fun _ -> Some v)
   let delete : key -> 'a t -> 'a t = fun k -> update k (fun _ -> None)
 
-  (* TODO: unclear how to do this as in the paper they have acess to polymorphic maps
-  *)
-
-  let foldr : type a b. (a -> b -> b) -> b -> a t -> b =
-   fun k z qm ->
-    match qm with
-    | Empty -> z
-    | QM { rel; isect; union; complement; isect_fam; union_fam } -> z
+  let rec fold : 'a 'acc. ('a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc =
+   fun f m acc ->
+    match m with
+    | Empty -> acc
+    | QM { rel; isect; union; complement; isect_fam; union_fam } ->
+        (* The idea is to fold each map, calling `fold` and `M.fold` with `M`
+           in {Query_set_map, Rel_query_map, Query_map}. Trouble occurs when
+           recursively calling fold, as `type variable 'a occurs inside 'a t`.
+           I don't know ifi this implementation is correct.
+        *)
+        let acc =
+          Rel_query_map.fold
+            (fun _ adrm acc' -> Addr_map.fold (fun _ -> f) adrm acc')
+            rel acc
+        in
+        let acc = Query_set_map.fold (fun _ -> f) isect acc in
+        let acc = Query_set_map.fold (fun _ -> f) union acc in
+        let acc = fold f complement acc in
+        let acc =
+          Query_map.fold
+            (fun _ rqm acc' -> Rel_query_map.fold (fun _ -> f) rqm acc')
+            isect_fam acc
+        in
+        let acc =
+          Query_map.fold
+            (fun _ rqm acc' -> Rel_query_map.fold (fun _ -> f) rqm acc')
+            union_fam acc
+        in
+        acc
 end
 
 module S = Relation_set
