@@ -92,6 +92,7 @@ module Query_trie : sig
   val lookup : key -> 'a t -> 'a option
   val update : key -> 'a tf -> 'a t -> 'a t
   val fold : ('a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
+  val cardinal : 'a t -> int
 end = struct
   type key = query
 
@@ -191,11 +192,15 @@ end = struct
     | Empty -> acc
     | QM { rel; isect; union; complement; isect_fam; union_fam } ->
         (* The idea is to fold each map, calling `fold` and `M.fold` with `M`
-           in {Query_set_map, Rel_query_map, Query_map}. Trouble occurs when
-           recursively calling fold, as `type variable 'a occurs inside 'a t`.
-           I don't know ifi this implementation is correct.
+           in {Query_set_map, Rel_query_map, Query_map}. I don't know yet if
+           this implementation is correct.
         *)
         let acc =
+          (* Ignoring first argument because of mismatch of signature of
+             M.fold : (key -> 'a -> 'acc -> 'acc) -> 'a M.t -> 'acc -> 'acc
+             with the fold in the paper
+             fold : ('a -> 'acc -> 'acc) -> 'a M.t -> 'acc -> 'acc
+          *)
           Rel_query_map.fold
             (fun _ adrm acc' -> Addr_map.fold (fun _ -> f) adrm acc')
             rel acc
@@ -214,6 +219,9 @@ end = struct
             union_fam acc
         in
         acc
+
+  let cardinal : 'a t -> int = fun m -> fold (fun _ n -> n + 1) m 0
+  let elems : 'a t -> 'a list = fun m -> fold List.cons m []
 end
 
 module S = Relation_set
