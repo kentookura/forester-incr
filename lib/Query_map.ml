@@ -183,7 +183,7 @@ end = struct
               })
 
   let insert : key -> 'a -> 'a t -> 'a t = fun k v -> update k (fun _ -> Some v)
-  let delete : key -> 'a -> 'a t -> 'a t = fun k v -> update k (fun _ -> None)
+  let delete : key -> 'a t -> 'a t = fun k -> update k (fun _ -> None)
 
   (* TODO: unclear how to do this as in the paper they have acess to polymorphic maps
   *)
