@@ -1,7 +1,10 @@
-type key
+open Forester_core
+
+type key = addr Query.t
 type 'a t
 type 'a tf = 'a option -> 'a option
 
+val lift_tf : ('a t -> 'b) -> 'a t option -> 'b option
 val empty : 'a t
 val lookup : key -> 'a t -> 'a option
 val update : key -> 'a tf -> 'a t -> 'a t
