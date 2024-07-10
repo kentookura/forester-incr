@@ -32,51 +32,55 @@ end = struct
   open Forest
 
   let initial_plant : raw_forest -> forest = plant_forest
+
+  let build_query_graph (trees : Sem.tree list) =
+    let open Sem in
+    let query_graph = Query_graph.create () in
+    let analyse_tree roots (tree : Sem.tree) =
+      let roots = List.map (fun tree -> tree.fm.addr) trees :: roots in
+      tree.fm.addr |> Query_graph.add_vertex query_graph;
+
+      tree.body
+      |> List.iter @@ fun node ->
+         match Asai.Range.(node.value) with
+         | Query q ->
+             let matches = run_query q in
+             matches
+             |> Addr_set.iter (fun a ->
+                    let edge : Query_graph.edge = (tree.fm.addr, q, a) in
+                    Query_graph.add_edge_e query_graph edge)
+         | Query_polarity _ | Query_mode _ -> ()
+         | _ -> ()
+    in
+    trees |> List.iter (analyse_tree []);
+    query_graph
+
+  let build_query_trie (trees : Sem.tree list) : Addr_set.t Query_trie.t =
+    let open Sem in
+    let query_trie = Query_trie.empty in
+    let analyse_tree (tree : Sem.tree) =
+      ( List.fold_right @@ fun node map ->
+        match Asai.Range.(node.value) with
+        | Query q ->
+            let matches = run_query q in
+            Query_trie.update q (Option.map (fun x -> x)) map
+        | Query_polarity _ | Query_mode _ -> map
+        | _ -> map )
+        tree.body query_trie
+    in
+    List.fold_right
+      (fun tree trie ->
+        let trie' = analyse_tree tree in
+        Query_trie.union_with Addr_set.union trie' trie)
+      trees query_trie
+
+  (* NOTE:
+     To compute the set of nodes affected by a change to t, take a union of
+     succs and preds of all relations.
+  *)
 end
 
-(* Don't know if a graph is the right structure *)
-let build_query_graph (trees : Sem.tree list) =
-  let open Sem in
-  let query_graph = Query_graph.create () in
-  let analyse_tree roots (tree : Sem.tree) =
-    let roots = List.map (fun tree -> tree.fm.addr) trees :: roots in
-    tree.fm.addr |> Query_graph.add_vertex query_graph;
-
-    tree.body
-    |> List.iter @@ fun node ->
-       match Asai.Range.(node.value) with
-       | Query q ->
-           let matches = Renderer.run_query q in
-           matches
-           |> Addr_set.iter (fun a ->
-                  let edge : Query_graph.edge = (tree.fm.addr, q, a) in
-                  Query_graph.add_edge_e query_graph edge)
-       | Query_polarity _ | Query_mode _ -> ()
-       | _ -> ()
-  in
-  trees |> List.iter (analyse_tree []);
-  query_graph
-
-let build_query_trie (trees : Sem.tree list) : Addr_set.t Query_trie.t =
-  let open Sem in
-  let query_trie = Query_trie.empty in
-  let analyse_tree roots (tree : Sem.tree) =
-    let roots = List.map (fun tree -> tree.fm.addr) trees :: roots in
-    ( List.fold_right @@ fun node map ->
-      match Asai.Range.(node.value) with
-      | Query q ->
-          let matches = Renderer.run_query q in
-          Query_trie.update q (Option.map (fun x -> x)) map
-      | Query_polarity _ | Query_mode _ -> map
-      | _ -> map )
-      tree.body query_trie
-  in
-  List.fold_right
-    (fun tree trie ->
-      let trie' = analyse_tree [] tree in
-      Query_trie.union_with (fun a b -> Addr_set.union a b) trie' trie)
-    trees query_trie
-
+(* let dirties : addr -> Addr_set.t Query_trie.t -> Addr_set.t = fun _ -> () *)
 let get_tree = Addr_map.find_opt
 
 let get_sorted_trees addrs (forest : Forest.forest) : Sem.tree list =
