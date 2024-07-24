@@ -26,11 +26,9 @@
    forester
    forester_irmin
    current_incr
-   lwt
    irmin
    dream
    dream-html
-   lwt_eio
    irmin-fs)
  (tags
   (topics "to describe" your project)))

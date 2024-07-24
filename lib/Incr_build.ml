@@ -43,13 +43,12 @@ end = struct
       tree.body
       |> List.iter @@ fun node ->
          match Asai.Range.(node.value) with
-         | Query q ->
+         | Query_tree (opts, q) ->
              let matches = run_query q in
              matches
              |> Addr_set.iter (fun a ->
                     let edge : Query_graph.edge = (tree.fm.addr, q, a) in
                     Query_graph.add_edge_e query_graph edge)
-         | Query_polarity _ | Query_mode _ -> ()
          | _ -> ()
     in
     trees |> List.iter (analyse_tree []);
@@ -61,10 +60,9 @@ end = struct
     let analyse_tree (tree : Sem.tree) =
       ( List.fold_right @@ fun node map ->
         match Asai.Range.(node.value) with
-        | Query q ->
+        | Query_tree (opts, q) ->
             let matches = run_query q in
             Query_trie.update q (Option.map (fun x -> x)) map
-        | Query_polarity _ | Query_mode _ -> map
         | _ -> map )
         tree.body query_trie
     in

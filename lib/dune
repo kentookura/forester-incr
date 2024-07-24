@@ -4,8 +4,6 @@
    ocamlgraph
    irmin
    irmin-fs.unix
-   lwt
-   lwt.unix
    forester.core
    forester_irmin
    forester.frontend

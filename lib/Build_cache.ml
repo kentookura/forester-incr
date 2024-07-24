@@ -1,5 +1,3 @@
-open Lwt.Syntax
-
 module S = Algaeff.Sequencer.Make (struct
   type t = Eio.Fs.dir_ty Eio.Path.t
 end)
@@ -71,7 +69,7 @@ let read_trees_in_dirs ~dev ?(_ignore_malformed = false) dirs
                  }
            | Error _ -> None)
        | None -> None )
-  |> Lwt_list.iter_p (fun { contents; last_changed; path; addr } ->
+  |> List.iter (fun { contents; last_changed; path; addr } ->
          let hash = Cache.Backend.Contents.Hash.hash contents in
          let key = Cache.Contents.of_hash (Cache.repo build_cache) hash in
          let info () = Cache.Info.v 0L in

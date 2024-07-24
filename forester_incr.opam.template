@@ -1,4 +1,8 @@
 pin-depends: [
-  ["forester.dev" "git+file:///home/kento/ocaml-forester"]
-  ["forester_irmin.dev" "git+file:///home/kento/ocaml-forester-irmin"]
+  ["forester.dev" "git+https://git.sr.ht/~jonsterling/ocaml-forester"]
+  ["forester_irmin.dev" "git+https://git.sr.ht/~jonsterling/ocaml-forester-irmin#195e2641addc11856b6cca0263f893acfb079dfb"]
+  ["irmin.dev" "git+https://github.com/art-w/irmin#9d606d78375abcd4c961331a1e8ee8f9be9212cb"]
+  ["irmin-git.dev" "git+https://github.com/art-w/irmin#9d606d78375abcd4c961331a1e8ee8f9be9212cb"]
+  ["irmin-fs.dev" "git+https://github.com/art-w/irmin#9d606d78375abcd4c961331a1e8ee8f9be9212cb"]
+  ["ppx_irmin.dev" "git+https://github.com/art-w/irmin#9d606d78375abcd4c961331a1e8ee8f9be9212cb"]
 ]
