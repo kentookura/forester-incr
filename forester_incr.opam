@@ -14,7 +14,14 @@ depends: [
   "dune" {>= "3.15"}
   "ocamlgraph"
   "forester"
+  "forester_irmin"
   "current_incr"
+  "lwt"
+  "irmin"
+  "dream"
+  "dream-html"
+  "lwt_eio"
+  "irmin-fs"
   "odoc" {with-doc}
 ]
 build: [
@@ -33,5 +40,6 @@ build: [
 ]
 dev-repo: "git+https://github.com/username/reponame.git"
 pin-depends: [
-  ["forester.dev" "git+https://git.sr.ht/~jonsterling/ocaml-forester#2b1aeaf3f829910ed43a572ac2ac7eb3c1ddce99"]
+  ["forester.dev" "git+file:///home/kento/ocaml-forester"]
+  ["forester_irmin.dev" "git+file:///home/kento/ocaml-forester-irmin"]
 ]

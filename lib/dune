@@ -1,13 +1,13 @@
 (library
+ (public_name forester_incr)
  (libraries 
-   forester.core
-   forester.frontend
    ocamlgraph
    irmin
    irmin-fs.unix
    lwt
    lwt.unix
    forester.core
+   forester_irmin
    forester.frontend
    current_incr)
  (name forester_incr))

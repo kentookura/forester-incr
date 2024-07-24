@@ -34,6 +34,22 @@
         "type": "github"
       }
     },
+    "forester-irmin": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1721491908,
+        "narHash": "sha256-LbLX3LFvpw2v7ve1Sf47ICcLa9ve90IBC1IDOUV7N3A=",
+        "owner": "~jonsterling",
+        "repo": "ocaml-forester-irmin",
+        "rev": "8754ad16c4763177f934508e4f0aeae10ba090d0",
+        "type": "sourcehut"
+      },
+      "original": {
+        "owner": "~jonsterling",
+        "repo": "ocaml-forester-irmin",
+        "type": "sourcehut"
+      }
+    },
     "mirage-opam-overlays": {
       "flake": false,
       "locked": {
@@ -152,6 +168,7 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "forester-irmin": "forester-irmin",
         "nixpkgs": "nixpkgs",
         "opam-nix": "opam-nix",
         "opam-repository": "opam-repository"

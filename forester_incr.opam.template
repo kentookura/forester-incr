@@ -1,3 +1,4 @@
 pin-depends: [
-  ["forester.dev" "git+https://git.sr.ht/~jonsterling/ocaml-forester#2b1aeaf3f829910ed43a572ac2ac7eb3c1ddce99"]
+  ["forester.dev" "git+file:///home/kento/ocaml-forester"]
+  ["forester_irmin.dev" "git+file:///home/kento/ocaml-forester-irmin"]
 ]
