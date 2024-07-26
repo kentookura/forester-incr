@@ -3,11 +3,6 @@
 open Forester_frontend
 open Forester_core
 open Query
-module Incr = Current_incr
-
-type t = Syn.tree Incr.t
-
-let const : t -> t Incr.t = Incr.const
 
 module Query_graph =
   Graph.Imperative.Digraph.ConcreteLabeled
