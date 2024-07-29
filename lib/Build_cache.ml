@@ -157,7 +157,9 @@ let trees_to_reevaluate dirs =
     (fun trees addr -> Addr_set.union (dependents addr) trees)
     Addr_set.empty changed_addrs
 
-(* TODO: *)
+(* TODO: Here I would need to look up the set of trees with queries that match
+   an addr in `reval`.
+*)
 let trees_to_rerender dirs =
-  let _reval = trees_to_reevaluate dirs in
+  let reval = trees_to_reevaluate dirs in
   Addr_set.empty
