@@ -33,3 +33,4 @@ val update_cache :
 
 val changed_trees : Fs.dir_ty Path.t list -> Code.tree list
 val trees_to_reevaluate : Fs.dir_ty Path.t list -> Addr_set.t
+val trees_to_rerender : Fs.dir_ty Path.t list -> Addr_set.t

@@ -172,3 +172,7 @@ let trees_to_reevaluate dirs =
     (fun trees addr -> Addr_set.union (deps addr) trees)
     (Addr_set.of_list changed_addrs)
     []
+
+let trees_to_rerender dirs =
+  let reval = trees_to_reevaluate dirs in
+  Addr_set.empty

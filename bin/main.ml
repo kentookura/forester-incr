@@ -31,29 +31,40 @@ let () =
   Forester_core.Reporter.run ~emit:Tty.display ~fatal @@ fun () ->
   Eio_main.run @@ fun env ->
   let cache_path = Eio.Path.(env#cwd / "build") in
-  let config =
+  let forest_config =
     Forester_frontend.Config.parse_forest_config_file "forest.toml"
   in
   let internal_cfg =
     {
-      (internal_config_from_config ~env config) with
+      (internal_config_from_config ~env forest_config) with
       no_assets = true;
       no_theme = true;
     }
   in
   let clock = Eio.Stdenv.clock env in
-  let config = Irmin_fs_unix.conf ~path:cache_path ~clock in
-  let repo = Cache.Backend.Repo.v config in
-  let dirs = [ Eio.Path.(Eio.Stdenv.cwd env / "trees") ] in
+  let cache_config = Irmin_fs_unix.conf ~path:cache_path ~clock in
+  let repo = Cache.Backend.Repo.v cache_config in
+  let dirs = make_dirs ~env Config.(forest_config.trees) in
   let cache = Irmin_defs.Cache.main repo in
 
   Cache'.run ~env:cache @@ fun () ->
+  Reporter.tracef "Trees that have changed since the last cache update:"
+  @@ fun () ->
   let changed = changed_trees dirs in
   let open Code in
   List.iter
     (fun tree ->
       match tree.addr with Some addr -> Format.printf "%s\n" addr | None -> ())
     changed;
+
+  Reporter.tracef "Trees that need to be reevaluated:" @@ fun () ->
+  let reval = trees_to_reevaluate dirs in
+  Addr_set.iter (fun addr -> Format.printf "%a\n" pp_addr addr) reval;
+
+  Reporter.tracef "Trees that need to be rerendered:" @@ fun () ->
+  let reval = trees_to_rerender dirs in
+  Addr_set.iter (fun addr -> Format.printf "%a\n" pp_addr addr) reval;
+
   let _ = update_cache dirs in
   let changed = changed_trees dirs in
   let open Code in
