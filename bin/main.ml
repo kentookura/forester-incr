@@ -48,29 +48,34 @@ let () =
   let cache = Irmin_defs.Cache.main repo in
 
   Cache'.run ~env:cache @@ fun () ->
-  Reporter.tracef "Trees that have changed since the last cache update:"
-  @@ fun () ->
   let changed = changed_trees dirs in
   let open Code in
-  List.iter
-    (fun tree ->
-      match tree.addr with Some addr -> Format.printf "%s\n" addr | None -> ())
-    changed;
+  let info =
+    List.filter_map
+      (fun tree ->
+        match tree.addr with
+        | Some addr ->
+            Some Range.{ loc = None; value = Asai.Diagnostic.text addr }
+        | None -> None)
+      changed
+  in
+  Reporter.emitf Profiling ~extra_remarks:info
+    "Trees that have changed since the last cache update:";
 
-  Reporter.tracef "Trees that need to be reevaluated:" @@ fun () ->
   let reval = trees_to_reevaluate dirs in
-  Addr_set.iter (fun addr -> Format.printf "%a\n" pp_addr addr) reval;
-
-  Reporter.tracef "Trees that need to be rerendered:" @@ fun () ->
-  let reval = trees_to_rerender dirs in
-  Addr_set.iter (fun addr -> Format.printf "%a\n" pp_addr addr) reval;
+  let info =
+    reval |> Addr_set.to_list
+    |> List.map (fun addr ->
+           Range.{ loc = None; value = Asai.Diagnostic.textf "%a" pp_addr addr })
+  in
+  Reporter.emitf Profiling ~extra_remarks:info
+    "Trees that need to be reevaluated";
 
   let _ = update_cache dirs in
   let changed = changed_trees dirs in
-  let open Code in
   List.iter
     (fun tree ->
-      match tree.addr with Some addr -> Format.printf "%s\n" addr | None -> ())
+      match Code.(tree.addr) with
+      | Some addr -> Format.printf "%s\n" addr
+      | None -> ())
     changed
-(* let reval = trees_to_reevaluate dirs in *)
-(* Addr_set.iter (fun addr -> Format.printf "%a\n" pp_addr addr) reval *)
