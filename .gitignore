@@ -3,4 +3,6 @@ result/
 _build/
 build/
 trees/
+assets/
+theme/
 forest.toml
