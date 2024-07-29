@@ -8,9 +8,11 @@ let artifact b = Artifact b
 type forest_content =
   (Forester_core.Xml_tree.tree_, Forester_core.Code.tree) content
 
-module Content : Irmin.Contents.S with type t = forest_content = struct
-  open Irmin.Type
+(* Although we store the xml format, we won't be able to use this module for
+   remote forestry, as the non-git filesystem backend does not support
+   syncing.*)
 
+module Content : Irmin.Contents.S with type t = forest_content = struct
   type t = forest_content
 
   let t : t Repr.ty =

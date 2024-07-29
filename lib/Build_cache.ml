@@ -2,12 +2,6 @@ open Forester_core
 open Forester_frontend
 open Irmin_defs
 
-(* NOTE:
-   Not every irmin store supports the Sync API. This means we can only use the
-   store module defined in this file for the build cache. For remote forestry,
-   we should fetch the compiled format.
-*)
-
 module S = Algaeff.Sequencer.Make (struct
   type t = Eio.Fs.dir_ty Eio.Path.t
 end)
@@ -46,7 +40,7 @@ let addr_of_fs_path : Eio.Fs.dir_ty Eio.Path.t -> addr =
       Reporter.fatalf Internal_error
         "could not make addres from path %a because splitting the path failed."
         Eio.Path.pp path
-  | Some (path, base) -> User_addr (Filename.chop_extension base)
+  | Some (_, base) -> User_addr (Filename.chop_extension base)
 
 let store_path_of_addr : addr -> Cache.Path.t =
  fun addr -> [ Format.asprintf "%a" pp_addr addr ]
@@ -62,26 +56,20 @@ let pp_store_path ppf segments =
 
 let pp_path = Eio.Path.pp
 
-open Code
+type 'a status = Changed of 'a | Unchanged of 'a
 
-module Status = struct
-  type 'a t = Changed of 'a | Unchanged of 'a
+let unchanged a = Unchanged a
+let changed a = Changed a
 
-  let partition_map p l =
-    let rec part left right = function
-      | [] -> (List.rev left, List.rev right)
-      | x :: l -> (
-          match p x with
-          | Changed v -> part (v :: left) right l
-          | Unchanged v -> part left (v :: right) l)
-    in
-    part [] [] l
-end
-
-open Status
-
-let unchanged a = Status.Unchanged a
-let changed a = Status.Changed a
+let partition_by_status p l =
+  let rec part left right = function
+    | [] -> (List.rev left, List.rev right)
+    | x :: l -> (
+        match p x with
+        | Changed v -> part (v :: left) right l
+        | Unchanged v -> part left (v :: right) l)
+  in
+  part [] [] l
 
 (* Right if changed, Left if unchanged. We're still returning the unchanged tree to avoid reparsing*)
 let changed_content path =
@@ -90,8 +78,7 @@ let changed_content path =
   let code =
     match Parse.parse_file path with
     | Error _ ->
-        Reporter.fatalf Parse_error "failed to parse tree at %a" Eio.Path.pp
-          path
+        Reporter.fatalf Parse_error "failed to parse tree at %a" pp_path path
     | Ok code -> code
   in
   let source_path = Option.map Unix.realpath @@ Eio.Path.native path in
@@ -102,6 +89,13 @@ let changed_content path =
   in
   let tree = Code.{ source_path; addr; code } in
   let fresh_hash = Cache.Backend.Contents.Hash.hash @@ value tree in
+  (* Maybe this logic is redundant, maybe the irmin API provides a better way
+     to do this *)
+  match Cache.hash cache store_path with
+  | Some stored_hash ->
+      if stored_hash = fresh_hash then unchanged tree else changed tree
+  | None -> changed tree
+(*
   match Cache.find cache store_path with
   | Some stored_code -> (
       match Cache.hash cache store_path with
@@ -109,43 +103,29 @@ let changed_content path =
           if stored_hash = fresh_hash then unchanged tree else changed tree
       | None -> changed tree)
   | None -> changed tree
+  *)
 
 let update_content path =
   let cache = Cache'.read () in
   match changed_content path with
   | Unchanged _ -> Ok ()
   | Changed tree ->
+      Reporter.tracef "updating %a" pp_store_path (store_path_of_path path)
+      @@ fun () ->
       Cache.set ~info:(info "foo") cache (store_path_of_path path) (value tree)
 
-let update_changed cache = function
-  | Unchanged tree -> Ok tree
-  | Changed tree -> (
-      match tree.addr with
-      | None -> Reporter.fatalf Internal_error "tree has no address"
-      | Some a ->
-          Result.map (Fun.const tree)
-          @@ Cache.set ~info:(info "foo") cache
-               (store_path_of_addr (User_addr a))
-               (value tree))
-
-let update_and_return path =
-  let cache = Cache'.read () in
-  match changed_content path with
-  | Changed tree -> tree
-  | Unchanged tree ->
-      let _ =
-        Cache.set ~info:(info "foo") cache (store_path_of_path path)
-          (value tree)
-      in
-      tree
-
-let update_cache dirs =
-  Reporter.emitf Profiling "updating cache";
-  scan_directories dirs |> List.of_seq |> List.map @@ fun p -> update_content p
-
-let get_updated dirs =
-  scan_directories dirs |> List.of_seq
-  |> List.map @@ fun p -> update_and_return p
+let update_cache :
+    Eio.Fs.dir_ty Eio.Path.t list -> (unit, Cache.write_error list) result =
+  let to_either = function
+    | Ok a -> Either.Right a
+    | Error e -> Either.Left e
+  in
+  fun dirs ->
+    Reporter.tracef "when updating cache" @@ fun () ->
+    scan_directories dirs |> List.of_seq
+    |> List.map (fun p -> update_content p)
+    |> List.partition_map to_either
+    |> fun (errs, _) -> match errs with [] -> Ok () | _ :: _ -> Error errs
 
 let changed_trees dirs =
   scan_directories dirs |> List.of_seq
@@ -157,7 +137,7 @@ let changed_trees dirs =
 let trees_to_reevaluate dirs =
   let changed_trees, unchanged_trees =
     scan_directories dirs |> List.of_seq
-    |> Status.partition_map (fun path -> changed_content path)
+    |> partition_by_status (fun path -> changed_content path)
   in
   let import_graph =
     Import_graph.build_import_graph (changed_trees @ unchanged_trees)
@@ -166,13 +146,16 @@ let trees_to_reevaluate dirs =
     Import_graph.Gph.fold_pred Addr_set.add import_graph addr Addr_set.empty
   in
   let changed_addrs =
-    List.filter_map (fun tree -> Option.map user_addr tree.addr) changed_trees
+    List.filter_map
+      (fun tree -> Option.map user_addr Code.(tree.addr))
+      changed_trees
   in
   List.fold_left
     (fun trees addr -> Addr_set.union (deps addr) trees)
     (Addr_set.of_list changed_addrs)
     []
 
+(* TODO: *)
 let trees_to_rerender dirs =
-  let reval = trees_to_reevaluate dirs in
+  let _reval = trees_to_reevaluate dirs in
   Addr_set.empty

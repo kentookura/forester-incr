@@ -29,7 +29,7 @@ end
 val update_content : Fs.dir_ty Path.t -> (unit, Cache.write_error) result
 
 val update_cache :
-  Fs.dir_ty Path.t list -> (unit, Cache.write_error) result list
+  Fs.dir_ty Path.t list -> (unit, Cache.write_error list) result
 
 val changed_trees : Fs.dir_ty Path.t list -> Code.tree list
 val trees_to_reevaluate : Fs.dir_ty Path.t list -> Addr_set.t
