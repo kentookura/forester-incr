@@ -1,10 +1,10 @@
 open Forester_core
-open Query
-
-type query = addr Query.t
+(** This module is broken since the addition of closures. I need to think about how to proceed.
+    Should I just use Eval.inst_qclo?
+ *)
 
 module Query_map = Map.Make (struct
-  type t = query
+  type t = Sem.query
 
   let compare = compare
 end)
@@ -16,7 +16,7 @@ module Rel_query_map = Map.Make (struct
 end)
 
 module Query_set = Set.Make (struct
-  type t = query
+  type t = Sem.query
 
   let compare = compare
 end)
@@ -28,13 +28,18 @@ module Query_set_map = Map.Make (struct
   let compare = compare
 end)
 
-type 'a tf = 'a option -> 'a option
-type key = query
+(* type 'a tf = 'a option -> 'a option *)
+(* type key = Sem.query *)
 
 (* Each constructor becomes a field.
    Each field becomes a nested map.
    Maybe it is possible to make this into a library using repr.
 *)
+
+(*
+module Closure_map = struct
+  type 'a t = Empty | CM of { clo : Query_map.t; rel : Query_map.t }
+end
 
 type 'a t =
   | Empty
@@ -43,18 +48,18 @@ type 'a t =
       isect : 'a Query_set_map.t;
       union : 'a Query_set_map.t;
       complement : 'a t;
-      isect_fam : 'a Rel_query_map.t Query_map.t;
-      union_fam : 'a Rel_query_map.t Query_map.t;
+      isect_fam : 'a Closure_map.t Query_map.t;
+      union_fam : 'a Closure_map.t Query_map.t;
     }
 
 let empty = Empty
 
-let rec lookup : type a. query -> a t -> a option =
+let rec lookup : type a. Sem.query -> a t -> a option =
  fun q qm ->
   match qm with
   | Empty -> None
   | QM { rel; isect; union; complement; isect_fam; union_fam } -> (
-      match Forester_core.Query.view q with
+      match q with
       | Rel (q, a) ->
           Option.bind (Rel_query_map.find_opt q rel) (Addr_map.find_opt a)
       (* NOTE: isect and union should not be sensitive to list order. That's
@@ -78,7 +83,7 @@ let rec update : type a. query -> a tf -> a t -> a t =
   match qm with
   | Empty -> Empty
   | QM ({ rel; isect; union; complement; isect_fam; union_fam } as m) -> (
-      match view q with
+      match q with
       | Rel (relq, addr) ->
           QM
             {
@@ -192,3 +197,4 @@ let rec union_with : 'a. ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t =
       QM { rel; isect; union; complement; isect_fam; union_fam }
   | qm, Empty -> qm
   | Empty, qm -> qm
+*)
