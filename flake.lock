@@ -34,20 +34,19 @@
         "type": "github"
       }
     },
-    "forester-irmin": {
-      "flake": false,
+    "flake-utils_2": {
       "locked": {
-        "lastModified": 1721491908,
-        "narHash": "sha256-LbLX3LFvpw2v7ve1Sf47ICcLa9ve90IBC1IDOUV7N3A=",
-        "owner": "~jonsterling",
-        "repo": "ocaml-forester-irmin",
-        "rev": "8754ad16c4763177f934508e4f0aeae10ba090d0",
-        "type": "sourcehut"
+        "lastModified": 1638122382,
+        "narHash": "sha256-sQzZzAbvKEqN9s0bzWuYmRaA03v40gaJ4+iL1LXjaeI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "74f7e4319258e287b0f9cb95426c9853b282730b",
+        "type": "github"
       },
       "original": {
-        "owner": "~jonsterling",
-        "repo": "ocaml-forester-irmin",
-        "type": "sourcehut"
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
       }
     },
     "mirage-opam-overlays": {
@@ -68,11 +67,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1720031269,
-        "narHash": "sha256-rwz8NJZV+387rnWpTYcXaRNvzUSnnF9aHONoJIYmiUQ=",
+        "lastModified": 1722062969,
+        "narHash": "sha256-QOS0ykELUmPbrrUGmegAUlpmUFznDQeR4q7rFhl8eQg=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "9f4128e00b0ae8ec65918efeba59db998750ead6",
+        "rev": "b73c2221a46c13557b1b3be9c2070cc42cf01eb3",
         "type": "github"
       },
       "original": {
@@ -82,20 +81,30 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1682362401,
+        "narHash": "sha256-/UMUHtF2CyYNl4b60Z2y4wwTTdIWGKhj9H301EDcT9M=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "884ac294018409e0d1adc0cae185439a44bd6b0b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "opam-nix": {
       "inputs": {
         "flake-compat": "flake-compat",
-        "flake-utils": [
-          "flake-utils"
-        ],
+        "flake-utils": "flake-utils_2",
         "mirage-opam-overlays": "mirage-opam-overlays",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
+        "nixpkgs": "nixpkgs_2",
         "opam-overlays": "opam-overlays",
-        "opam-repository": [
-          "opam-repository"
-        ],
+        "opam-repository": "opam-repository",
         "opam2json": "opam2json"
       },
       "locked": {
@@ -131,11 +140,27 @@
     "opam-repository": {
       "flake": false,
       "locked": {
-        "lastModified": 1720172178,
-        "narHash": "sha256-PTc+pVy3KzavDaGdb4TZOVWQlljO1NP403aS8P4qxOY=",
+        "lastModified": 1705008664,
+        "narHash": "sha256-TTjTal49QK2U0yVOmw6rJhTGYM7tnj3Kv9DiEEiLt7E=",
         "owner": "ocaml",
         "repo": "opam-repository",
-        "rev": "ca7f74d624024c73a7297ea2b022ef88d65b1121",
+        "rev": "fa77046c6497f8ca32926acdb7eb1e61777d4c17",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ocaml",
+        "repo": "opam-repository",
+        "type": "github"
+      }
+    },
+    "opam-repository_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1721991799,
+        "narHash": "sha256-tCIjnyc0XAXN5WQS239gJw3ZRuY/yqU3rF1/NM24G+M=",
+        "owner": "ocaml",
+        "repo": "opam-repository",
+        "rev": "eceb4d83610133a48b62daa36665ce1292646561",
         "type": "github"
       },
       "original": {
@@ -168,10 +193,9 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "forester-irmin": "forester-irmin",
         "nixpkgs": "nixpkgs",
         "opam-nix": "opam-nix",
-        "opam-repository": "opam-repository"
+        "opam-repository": "opam-repository_2"
       }
     },
     "systems": {
