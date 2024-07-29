@@ -77,7 +77,7 @@ let partition_by_status p l =
   in
   part [] [] l
 
-let changed_content path =
+let has_changed path =
   let cache = Cache_handle.read () in
   let store_path = path |> addr_of_fs_path |> store_path_of_addr in
   let code =
@@ -101,7 +101,7 @@ let changed_content path =
 
 let update_content path =
   let cache = Cache_handle.read () in
-  match changed_content path with
+  match has_changed path with
   | Unchanged _ -> Ok ()
   | Changed tree ->
       Reporter.tracef "updating %a" pp_store_path (store_path_of_path path)
@@ -147,14 +147,14 @@ let update_cache =
 let changed_trees dirs =
   scan_directories dirs |> List.of_seq
   |> List.filter_map (fun path ->
-         match changed_content path with
+         match has_changed path with
          | Changed tree -> Some tree
          | Unchanged _ -> None)
 
 let trees_to_reevaluate dirs =
   let changed_trees, unchanged_trees =
     scan_directories dirs |> List.of_seq
-    |> partition_by_status (fun path -> changed_content path)
+    |> partition_by_status (fun path -> has_changed path)
   in
   let dependency_graph =
     Import_graph.build_import_graph (changed_trees @ unchanged_trees)
