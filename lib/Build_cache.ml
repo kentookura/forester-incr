@@ -14,6 +14,8 @@ module Cache' = Algaeff.Reader.Make (struct
   type t = Cache.t
 end)
 
+module Oper = Graph.Oper.Make (Graph.Builder.I (Import_graph.Gph))
+
 let rec process_file fp =
   if Eio.Path.is_directory fp then process_dir fp
   else
@@ -139,11 +141,12 @@ let trees_to_reevaluate dirs =
     scan_directories dirs |> List.of_seq
     |> partition_by_status (fun path -> changed_content path)
   in
-  let import_graph =
+  let dependency_graph =
     Import_graph.build_import_graph (changed_trees @ unchanged_trees)
+    |> Oper.transitive_closure
   in
-  let deps addr =
-    Import_graph.Gph.fold_pred Addr_set.add import_graph addr Addr_set.empty
+  let dependents addr =
+    Import_graph.Gph.fold_succ Addr_set.add dependency_graph addr Addr_set.empty
   in
   let changed_addrs =
     List.filter_map
@@ -151,9 +154,8 @@ let trees_to_reevaluate dirs =
       changed_trees
   in
   List.fold_left
-    (fun trees addr -> Addr_set.union (deps addr) trees)
-    (Addr_set.of_list changed_addrs)
-    []
+    (fun trees addr -> Addr_set.union (dependents addr) trees)
+    Addr_set.empty changed_addrs
 
 (* TODO: *)
 let trees_to_rerender dirs =
