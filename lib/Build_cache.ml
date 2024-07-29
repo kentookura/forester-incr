@@ -6,11 +6,7 @@ module S = Algaeff.Sequencer.Make (struct
   type t = Eio.Fs.dir_ty Eio.Path.t
 end)
 
-module Config = Algaeff.Reader.Make (struct
-  type t = Forester_frontend.Config.Forest_config.t
-end)
-
-module Cache' = Algaeff.Reader.Make (struct
+module Cache_handle = Algaeff.Reader.Make (struct
   type t = Cache.t
 end)
 
@@ -47,6 +43,17 @@ let addr_of_fs_path : Eio.Fs.dir_ty Eio.Path.t -> addr =
 let store_path_of_addr : addr -> Cache.Path.t =
  fun addr -> [ Format.asprintf "%a" pp_addr addr ]
 
+let store_path_of_content : forest_content -> Cache.Path.t = function
+  | Value tree -> (
+      match tree.addr with
+      | Some addr -> [ "content"; addr ]
+      | None -> Reporter.fatalf Internal_error "tree has no address")
+  | Artifact xml -> (
+      match xml with
+      | Xml_tree.Tree { frontmatter = { addr = Some a; _ }; _ } ->
+          [ "value"; Format.asprintf "%a" pp_addr a ]
+      | _ -> Reporter.fatalf Internal_error "tree has no address")
+
 let store_path_of_path p = p |> addr_of_fs_path |> store_path_of_addr
 let user_addr addr = User_addr addr
 
@@ -60,9 +67,6 @@ let pp_path = Eio.Path.pp
 
 type 'a status = Changed of 'a | Unchanged of 'a
 
-let unchanged a = Unchanged a
-let changed a = Changed a
-
 let partition_by_status p l =
   let rec part left right = function
     | [] -> (List.rev left, List.rev right)
@@ -73,9 +77,8 @@ let partition_by_status p l =
   in
   part [] [] l
 
-(* Right if changed, Left if unchanged. We're still returning the unchanged tree to avoid reparsing*)
 let changed_content path =
-  let cache = Cache'.read () in
+  let cache = Cache_handle.read () in
   let store_path = path |> addr_of_fs_path |> store_path_of_addr in
   let code =
     match Parse.parse_file path with
@@ -90,34 +93,46 @@ let changed_content path =
     | Some (_, base) -> Some (Filename.chop_extension base)
   in
   let tree = Code.{ source_path; addr; code } in
-  let fresh_hash = Cache.Backend.Contents.Hash.hash @@ value tree in
-  (* Maybe this logic is redundant, maybe the irmin API provides a better way
-     to do this *)
+  let fresh_hash = Cache.Backend.Contents.Hash.hash @@ Value tree in
   match Cache.hash cache store_path with
   | Some stored_hash ->
-      if stored_hash = fresh_hash then unchanged tree else changed tree
-  | None -> changed tree
-(*
-  match Cache.find cache store_path with
-  | Some stored_code -> (
-      match Cache.hash cache store_path with
-      | Some stored_hash ->
-          if stored_hash = fresh_hash then unchanged tree else changed tree
-      | None -> changed tree)
-  | None -> changed tree
-  *)
+      if stored_hash = fresh_hash then Unchanged tree else Changed tree
+  | None -> Changed tree
 
 let update_content path =
-  let cache = Cache'.read () in
+  let cache = Cache_handle.read () in
   match changed_content path with
   | Unchanged _ -> Ok ()
   | Changed tree ->
       Reporter.tracef "updating %a" pp_store_path (store_path_of_path path)
       @@ fun () ->
-      Cache.set ~info:(info "foo") cache (store_path_of_path path) (value tree)
+      let v = Value tree in
+      let path = store_path_of_content v in
+      Cache.set ~info:(info "foo") cache path v
 
-let update_cache :
-    Eio.Fs.dir_ty Eio.Path.t list -> (unit, Cache.write_error list) result =
+let get_value name =
+  let cache = Cache_handle.read () in
+  let path = [ "values"; name ] in
+  Cache.get cache path |> function
+  | Value v -> v
+  | Artifact _ ->
+      Reporter.fatalf Internal_error
+        "got artifact when looking up store path %a. This should never happen! \
+         There is a bug in the code which stores artifacts!"
+        pp_store_path path
+
+let get_artifact name =
+  let cache = Cache_handle.read () in
+  let path = [ "artifacts"; name ] in
+  Cache.get cache path |> function
+  | Artifact a -> a
+  | Value _ ->
+      Reporter.fatalf Internal_error
+        "got value when looking up store path %a. This should never happen! \
+         There is a bug in the code which stores values!"
+        pp_store_path path
+
+let update_cache =
   let to_either = function
     | Ok a -> Either.Right a
     | Error e -> Either.Left e

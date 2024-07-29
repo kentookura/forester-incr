@@ -47,7 +47,7 @@ let () =
   let dirs = make_dirs ~env Config.(forest_config.trees) in
   let cache = Irmin_defs.Cache.main repo in
 
-  Cache'.run ~env:cache @@ fun () ->
+  Cache_handle.run ~env:cache @@ fun () ->
   let changed = changed_trees dirs in
   let open Code in
   let info =

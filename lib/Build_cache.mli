@@ -10,7 +10,7 @@ module S : sig
     ([ `Yield of Eio.Fs.dir_ty Eio.Path.t ] -> string option) -> unit
 end
 
-module Cache' : sig
+module Cache_handle : sig
   val read : unit -> Cache.t
   val scope : (Cache.t -> Cache.t) -> (unit -> 'a) -> 'a
   val run : env:Cache.t -> (unit -> 'a) -> 'a
@@ -26,6 +26,8 @@ end
   val changed_content : Fs.dir_ty Path.t -> Cache.t -> Code.tree option
 *)
 
+val get_value : string -> Code.tree
+val get_artifact : string -> Xml_tree.tree_
 val update_content : Fs.dir_ty Path.t -> (unit, Cache.write_error) result
 
 val update_cache :

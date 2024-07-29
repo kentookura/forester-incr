@@ -2,9 +2,6 @@
 (* https://github.com/ocaml/dune/blob/a3a5bfcecae994509b2cb5e283e9569956244785/doc/dev/cache.md *)
 type ('a, 'b) content = Artifact of 'a | Value of 'b
 
-let value a = Value a
-let artifact b = Artifact b
-
 type forest_content =
   (Forester_core.Xml_tree.tree_, Forester_core.Code.tree) content
 
